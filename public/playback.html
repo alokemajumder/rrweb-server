@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Session Playback</title>
+  <link rel="stylesheet" href="https://unpkg.com/rrweb-player@latest/dist/style.css">
+  <style>
+    #playerContainer { margin-top: 20px; }
+    form { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Session Playback</h1>
+
+  <!-- Form to input session URL -->
+  <form id="sessionForm">
+    <label for="sessionUrlInput">Session URL:</label>
+    <input type="text" id="sessionUrlInput" placeholder="Enter session URL" required style="width: 300px;">
+    <br><br>
+    <button type="submit">Load Session</button>
+  </form>
+
+  <div id="playerContainer" style="display:none;">
+    <div id="player"></div>
+  </div>
+
+  <!-- Load rrweb-player -->
+  <script src="https://unpkg.com/rrweb-player@latest/dist/index.js"></script>
+  <script>
+    // Utility to dynamically load external scripts.
+    function loadScript(src) {
+      return new Promise(function(resolve, reject) {
+        const script = document.createElement("script");
+        script.src = src;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    (function() {
+      "use strict";
+
+      // Helper: get query parameter.
+      function getQueryParam(param) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(param);
+      }
+
+      // First, fetch backend config to determine if console replay should be enabled.
+      fetch("/config")
+        .then(function(res) { return res.json(); })
+        .then(function(config) {
+          const promises = [];
+          if (config.enableConsolePlugin) {
+            promises.push(loadScript("https://unpkg.com/@rrweb/rrweb-plugin-console-replay@latest/dist/index.umd.min.js"));
+          }
+          return Promise.all(promises).then(function() { return config; });
+        })
+        .then(function(config) {
+          // Function to load and display a session using rrweb-player.
+          function loadSession(sessionUrl) {
+            if (!sessionUrl) {
+              alert("Please provide a valid session URL.");
+              return;
+            }
+            fetch(sessionUrl)
+              .then(function(response) {
+                if (!response.ok) throw new Error("Network response was not ok");
+                return response.json();
+              })
+              .then(function(sessionData) {
+                if (!sessionData.events || !Array.isArray(sessionData.events)) {
+                  throw new Error("Invalid session data");
+                }
+                document.getElementById("playerContainer").style.display = "block";
+                const plugins = [];
+                if (window.rrwebPluginSequentialIdReplay) {
+                  plugins.push(window.rrwebPluginSequentialIdReplay);
+                }
+                if (config.enableConsolePlugin && window.rrwebPluginConsoleReplay) {
+                  plugins.push(window.rrwebPluginConsoleReplay);
+                }
+                new rrwebPlayer({
+                  target: document.getElementById("player"),
+                  props: {
+                    events: sessionData.events,
+                    autoPlay: false,
+                    plugins: plugins
+                  }
+                });
+              })
+              .catch(function(err) {
+                console.error("Error loading session data:", err);
+                alert("Error loading session data. Check console for details.");
+              });
+          }
+
+          // If sessionUrl is provided in the query parameters, load it automatically.
+          const querySessionUrl = getQueryParam("sessionUrl");
+          if (querySessionUrl) {
+            document.getElementById("sessionForm").style.display = "none";
+            loadSession(querySessionUrl);
+          }
+
+          // Form submission handler.
+          document.getElementById("sessionForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const sessionUrl = document.getElementById("sessionUrlInput").value.trim();
+            if (!sessionUrl) {
+              alert("Please enter a session URL.");
+              return;
+            }
+            window.history.pushState({}, "", "?sessionUrl=" + encodeURIComponent(sessionUrl));
+            document.getElementById("sessionForm").style.display = "none";
+            loadSession(sessionUrl);
+          });
+        })
+        .catch(function(err) {
+          console.error("Error loading configuration for playback:", err);
+        });
+    })();
+  </script>
+</body>
+</html>
