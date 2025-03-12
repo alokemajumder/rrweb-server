@@ -1,0 +1,24 @@
+{
+  "name": "rrweb-session-capture",
+  "version": "1.0.0",
+  "description": "A production-grade Node.js application for capturing rrweb sessions with enhanced plugins and multi-domain support.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1182.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.7.0",
+    "helmet": "^6.0.1",
+    "uuid": "^9.0.0",
+    "rrdom": "^1.0.0",
+    "rrdom-nodejs": "^1.0.0",
+    "rrvideo": "^1.0.0",
+    "@rrweb/rrweb-plugin-sequential-id-record": "^1.0.0",
+    "@rrweb/rrweb-plugin-sequential-id-replay": "^1.0.0",
+    "@rrweb/rrweb-plugin-console-record": "^1.0.0",
+    "@rrweb/rrweb-plugin-console-replay": "^1.0.0"
+  }
+}
